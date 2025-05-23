@@ -1,10 +1,106 @@
-﻿import React from 'react';
+﻿import React, { useState } from 'react';
+
+interface ContactFormData {
+  name: string;
+  surname: string;
+  email: string;
+  phoneNumber: string;
+  subject: string;
+  message: string;
+  agreedToConditions: boolean;
+}
 
 export const ContactPage = () => {
-  const handleSubmit = (e: React.FormEvent) => {
+  const [formData, setFormData] = useState<ContactFormData>({
+    name: '',
+    surname: '',
+    email: '',
+    phoneNumber: '',
+    subject: '',
+    message: '',
+    agreedToConditions: false
+  });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value, type } = e.target;
+    
+    if (type === 'checkbox') {
+      setFormData(prev => ({
+        ...prev,
+        agreedToConditions: (e.target as HTMLInputElement).checked
+      }));
+    } else if (id === 'name') {
+      // Split full name into name and surname
+      const nameParts = value.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      setFormData(prev => ({
+        ...prev,
+        name: firstName,
+        surname: lastName
+      }));
+    } else {
+      // Map form field IDs to formData properties
+      const fieldMapping: Record<string, keyof ContactFormData> = {
+        'email': 'email',
+        'phone': 'phoneNumber',
+        'subject': 'subject',
+        'message': 'message'
+      };
+      
+      const fieldName = fieldMapping[id];
+      if (fieldName) {
+        setFormData(prev => ({
+          ...prev,
+          [fieldName]: value
+        }));
+      }
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Form submission logic would go here
-    alert('Váš dotaz byl odeslán. Děkujeme!');
+    setIsSubmitting(true);
+    setSubmitError(null);
+    
+    try {
+      const response = await fetch('http://localhost:5127/api/ContactForm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/plain'
+        },
+        body: JSON.stringify(formData)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+      
+      // Reset form
+      setFormData({
+        name: '',
+        surname: '',
+        email: '',
+        phoneNumber: '',
+        subject: '',
+        message: '',
+        agreedToConditions: false
+      });
+      
+      // Show success message
+      alert('Váš dotaz byl odeslán. Děkujeme!');
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      setSubmitError(error instanceof Error ? error.message : 'Došlo k chybě při odesílání formuláře.');
+      alert('Došlo k chybě při odesílání formuláře. Zkuste to prosím později.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -94,40 +190,84 @@ export const ContactPage = () => {
           
           <div className="contact-card">
             <h3 className="card-title">Napište nám</h3>
+            {submitError && (
+              <div className="error-message">
+                <p>{submitError}</p>
+              </div>
+            )}
             <form id="contactForm" onSubmit={handleSubmit}>
               <div className="form-group">
                 <label htmlFor="name">Jméno a příjmení</label>
-                <input type="text" id="name" required />
+                <input 
+                  type="text" 
+                  id="name" 
+                  value={formData.name + (formData.surname ? ' ' + formData.surname : '')}
+                  onChange={handleChange}
+                  required 
+                />
               </div>
               
               <div className="form-group">
                 <label htmlFor="email">E-mail</label>
-                <input type="email" id="email" required />
+                <input 
+                  type="email" 
+                  id="email" 
+                  value={formData.email}
+                  onChange={handleChange}
+                  required 
+                />
               </div>
               
               <div className="form-group">
                 <label htmlFor="phone">Telefon</label>
-                <input type="tel" id="phone" />
+                <input 
+                  type="tel" 
+                  id="phone" 
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                />
               </div>
               
               <div className="form-group">
                 <label htmlFor="subject">Předmět</label>
-                <input type="text" id="subject" />
+                <input 
+                  type="text" 
+                  id="subject" 
+                  value={formData.subject}
+                  onChange={handleChange}
+                />
               </div>
               
               <div className="form-group">
                 <label htmlFor="message">Zpráva</label>
-                <textarea id="message" rows={5} required></textarea>
+                <textarea 
+                  id="message" 
+                  rows={5} 
+                  value={formData.message}
+                  onChange={handleChange}
+                  required
+                ></textarea>
               </div>
               
               <div className="form-group checkbox-group">
                 <label>
-                  <input type="checkbox" required />
+                  <input 
+                    type="checkbox" 
+                    checked={formData.agreedToConditions}
+                    onChange={handleChange}
+                    required 
+                  />
                   <span>Souhlasím se zpracováním osobních údajů</span>
                 </label>
               </div>
               
-              <button type="submit" className="cta">Odeslat zprávu</button>
+              <button 
+                type="submit" 
+                className="cta" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Odesílání...' : 'Odeslat zprávu'}
+              </button>
             </form>
           </div>
         </div>
