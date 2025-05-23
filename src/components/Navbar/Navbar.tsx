@@ -1,6 +1,7 @@
 ﻿import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import weebyLogo from '../assets/weeby-logo.png';
+import weebyLogo from '../../assets/weeby-logo.png';
+import './navbar.css';
 
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
